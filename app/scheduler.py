@@ -1,7 +1,7 @@
 """
 This module sets up and manages the background scheduler responsible for sending
 scheduled SMS messages. It uses APScheduler to periodically check for messages
-that are due and Twilio's API to deliver them.
+that are due and Termii's API to deliver them.
 
 Functions included:
 - send_scheduled_messages: Executes the logic to send all pending messages.
@@ -9,11 +9,11 @@ Functions included:
 """
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from twilio.rest import Client
 from app.database import SessionLocal
 from app.crud import get_pending_messages, mark_as_sent
 from app.config import get_settings
 import logging
+import requests
 
 # ---------------------------------------------------------
 # Logging Configuration
@@ -25,14 +25,9 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # ---------------------------------------------------------
-# Initialize Twilio Client
+# Termii API Configuration
 # ---------------------------------------------------------
-# The Twilio client is created once and reused for sending messages.
-# It uses credentials loaded from environment variables.
-twilio_client = Client(
-    settings.twilio_account_sid,
-    settings.twilio_auth_token
-)
+TERMIi_BASE_URL = "https://api.ng.termii.com/api/sms/send"
 
 
 def send_scheduled_messages():
@@ -42,32 +37,46 @@ def send_scheduled_messages():
     Workflow:
         1. Retrieve unsent messages that are due (scheduled_time <= now).
         2. For each message:
-            - Send an SMS using Twilio.
+            - Send SMS using Termii’s API.
             - Mark the message as sent in the database.
-        3. Log successes and failures for visibility and debugging.
+        3. Log successes and failures for debugging.
 
-    This function is intended to be run periodically by APScheduler.
+    This function is triggered automatically by APScheduler.
     """
     logger.info("Running scheduled message job...")
 
     db = SessionLocal()
     try:
-        # Retrieve pending messages
         pending_messages = get_pending_messages(db)
         logger.info(f"Found {len(pending_messages)} pending messages")
 
         for msg in pending_messages:
             try:
-                # Send SMS via Twilio API
-                twilio_message = twilio_client.messages.create(
-                    body=f"Hi {msg.receiver_name},\n\n{msg.message}\n\n- {msg.sender_name}",
-                    from_=settings.twilio_phone_number,
-                    to=msg.receiver_phone
-                )
+                # Prepare Termii payload
+                payload = {
+                    "api_key": settings.termii_api_key,
+                    "to": msg.receiver_phone,
+                    "from": settings.termii_sender_id,
+                    "sms": f"Hi {msg.receiver_name},\n\n{msg.message}\n\n- {msg.sender_name}",
+                    "type": "plain",
+                    "channel": "generic"
+                }
 
-                # Update message status
-                mark_as_sent(db, msg.id)
-                logger.info(f"Message {msg.id} sent successfully. SID: {twilio_message.sid}")
+                # Send request
+                response = requests.post(TERMIi_BASE_URL, json=payload, timeout=15)
+
+                # Validate Termii response
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("code") == "ok":
+                        mark_as_sent(db, msg.id)
+                        logger.info(f"Message {msg.id} sent successfully via Termii.")
+                    else:
+                        logger.error(f"Termii error for message {msg.id}: {data}")
+                else:
+                    logger.error(
+                        f"HTTP error sending message {msg.id}: Status {response.status_code}"
+                    )
 
             except Exception as e:
                 logger.error(f"Failed to send message {msg.id}: {str(e)}")
@@ -86,7 +95,7 @@ def start_scheduler():
     The scheduler:
         - Runs in the background without blocking the main application.
         - Executes `send_scheduled_messages` every minute.
-        - Uses `replace_existing=True` to avoid duplicate jobs if restarted.
+        - Uses `replace_existing=True` to prevent duplicate job registration.
 
     Returns:
         BackgroundScheduler: The started scheduler instance.
@@ -96,12 +105,11 @@ def start_scheduler():
     scheduler.add_job(
         send_scheduled_messages,
         'interval',
-        minutes=1,          # Check for messages every minute
+        minutes=1,
         id='send_messages_job',
         replace_existing=True
     )
 
     scheduler.start()
     logger.info("Scheduler started successfully")
-
     return scheduler
