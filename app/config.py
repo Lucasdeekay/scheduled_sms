@@ -17,14 +17,16 @@ class Settings(BaseSettings):
 
     Attributes:
         database_url (str): Connection string for the application's database.
-        termii_api_key (str): Termii Account API KEY used for authentication.
-        termii_sender_id (str): Termii Sender ID.
+        twilio_account_sid (str): Twilio Account SID used for authentication.
+        twilio_auth_token (str): Twilio authentication token.
+        twilio_phone_number (str): Phone number provided by Twilio for sending messages.
         scheduled_time (str): Daily scheduled time for running a task (default: "14:30").
     """
 
     database_url: str
-    termii_api_key: str
-    termii_sender_id: str
+    twilio_account_sid: str
+    twilio_auth_token: str
+    twilio_phone_number: str
     scheduled_time: str = "14:30"
 
     class Config:
