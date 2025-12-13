@@ -27,7 +27,7 @@ settings = get_settings()
 # ---------------------------------------------------------
 # Termii API Configuration
 # ---------------------------------------------------------
-TERMIi_BASE_URL = "https://api.ng.termii.com/api/sms/send"
+TERMIi_BASE_URL = "https://v3.api.termii.com/api/sms/send"
 
 
 def send_scheduled_messages():
