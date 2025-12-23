@@ -2,7 +2,7 @@ from django.db import models
 from django.core.validators import RegexValidator
 
 phone_validator = RegexValidator(
-    regex=r'^+[1-9]\d{1,14}$',
+    regex=r'^\+[1-9]\d{1,14}$',
     message="Phone must be in E.164 format (+1234567890)"
 )
 
