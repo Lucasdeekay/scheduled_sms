@@ -39,11 +39,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
+    'rest_framework',
     'api',
     'sender',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -126,7 +129,13 @@ REST_FRAMEWORK = {
 'DEFAULT_PARSER_CLASSES': ['rest_framework.parsers.JSONParser'],
 }
 # --------- CORS (same as FastAPI) ---------
-CORS_ALLOW_ALL_ORIGINS = True  # clone of allow_origins=["*"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",   # React
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",   # Vite
+    "https://santa-lake.vercel.app",
+]
+
 # --------- TERMII SETTINGS ---------
 TERMII_API_KEY   = config('TERMII_API_KEY')
 TERMII_SENDER_ID = config('TERMII_SENDER_ID', default='DjangoApp')
