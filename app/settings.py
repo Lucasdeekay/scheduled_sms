@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-8e9sy49%ox^f3mqm*%-hfie=&+8$584bw*ro(c251g6&em4jk(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["pappycoder.pythonanywhere.com", "localhost", "127.0.0.1"]
 
 
 # Application definition
