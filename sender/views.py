@@ -17,7 +17,7 @@ logger = logging.getLogger()
 BASE_URL = "https://my.kudisms.net/api/autocomposesms"
 
 @csrf_exempt
-def send_due_messages():
+def send_due_messages(request):
     logger.info("Running scheduled message job...")
     due = Message.objects.filter(
         scheduled_time__lte=timezone.now(),
