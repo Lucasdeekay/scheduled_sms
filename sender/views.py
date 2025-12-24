@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------
 from apscheduler.schedulers.background import BackgroundScheduler
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from api.models import Message
 from app.settings import (
     API_KEY,        # re-use this field for Kudi token
@@ -15,6 +16,7 @@ logger = logging.getLogger()
 # Kudi: new endpoint
 BASE_URL = "https://my.kudisms.net/api/autocomposesms"
 
+@csrf_exempt
 def send_due_messages():
     logger.info("Running scheduled message job...")
     due = Message.objects.filter(
