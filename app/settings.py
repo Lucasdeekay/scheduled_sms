@@ -137,5 +137,5 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # --------- TERMII SETTINGS ---------
-TERMII_API_KEY   = config('TERMII_API_KEY')
-TERMII_SENDER_ID = config('TERMII_SENDER_ID', default='DjangoApp')
+API_KEY   = config('API_KEY')
+SENDER_ID = config('SENDER_ID', default='DjangoApp')
