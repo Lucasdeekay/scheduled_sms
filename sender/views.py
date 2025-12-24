@@ -1,6 +1,7 @@
 # ------------------------------------------------------------------
 # Kudi SMS replacement for Termii
 # ------------------------------------------------------------------
+from django.http import JsonResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -25,36 +26,29 @@ def send_due_messages(request):
     )
     logger.info(f"Found {due.count()} pending messages")
 
+    sent_count = 0
     for msg in due:
         try:
-            # Kudi: build the 3-column array it expects
             sms_text = f"Hi {msg.receiver_name},\n\n{msg.message}\n\n- {msg.sender_name}"
             payload = {
-                "token": API_KEY,          # your Kudi API key
-                "gateway": 2,                     # 2 = generic route (adjust if you need another)
-                "data": [
-                    [SENDER_ID, msg.receiver_phone, sms_text]
-                ]
+                "token": API_KEY,
+                "gateway": 2,
+                "data": [[SENDER_ID, msg.receiver_phone, sms_text]]
             }
 
-            # Kudi: POST JSON (not form-data)
             resp = requests.post(BASE_URL, json=payload, timeout=15)
-            logger.debug(f"Kudi raw response: {resp.text}")
-
-            # Kudi: success when HTTP 200 AND error_code == "000"
-            if resp.status_code == 200:
-                kudi_json = resp.json()
-                if kudi_json.get("error_code") == "000":
-                    msg.sent_at = timezone.now()
-                    msg.save(update_fields=['sent_at'])
-                    logger.info(f"Message {msg.id} sent successfully via Kudi.")
-                    continue
-
-            # anything else is a failure
-            logger.error(f"Kudi error for message {msg.id}: {resp.text}")
-
-        except Exception as exc:
+            if resp.status_code == 200 and resp.json().get("error_code") == "000":
+                msg.sent_at = timezone.now()
+                msg.save(update_fields=['sent_at'])
+                logger.info(f"Message {msg.id} sent successfully via Kudi.")
+                sent_count += 1
+            else:
+                logger.error(f"Kudi error for message {msg.id}: {resp.text}")
+        except Exception:
             logger.exception(f"Failed to send message {msg.id}")
+
+    # -----  RETURN A RESPONSE  -----
+    return JsonResponse({"status": "ok", "sent": sent_count})
 
 # ------------------------------------------------------------------
 # Scheduler boot code (unchanged)
